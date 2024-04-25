@@ -1,8 +1,9 @@
-import os 
+import os
 import logging
 
 from pyspark.sql import SparkSession
 from pyspark.conf import SparkConf
+from pyspark.sql import types
 
 class ny_taxi_data():
     def __init__(self, month, year, color):
@@ -40,14 +41,62 @@ class ny_taxi_data():
     def read_data_load(self):
         for col in self.color:
             df = self.spark.read.options(header='true', sep=',').csv(f"{col}/{col}_tripdata_{self.year[0]}-{self.month[0]:02}.csv.gz")
+            schema = self.green_schema() if col == 'green' else self.yellow_schema()
+
             df.write.format("jdbc") \
-                    .options(url="jdbc:postgresql://172.18.0.2:5432/walmart_db",
-                                dbtable=f"{col}_tripdata",
-                                user="root",
-                                password="root",
-                                driver="org.postgresql.Driver") \
-                    .mode('overwrite') \
-                    .save()
+                .options(url="jdbc:postgresql://172.18.0.2:5432/walmart_db",
+                         dbtable=f"{col}_tripdata",
+                         user="root",
+                         password="root",
+                         driver="org.postgresql.Driver") \
+                .mode('overwrite') \
+                .save()
+
+    def green_schema(self):
+        return types.StructType([
+            types.StructField('VendorID', types.IntegerType(), True),
+            types.StructField('lpep_pickup_datetime', types.TimestampType(), True), 
+            types.StructField('lpep_dropoff_datetime', types.TimestampType(), True), 
+            types.StructField('store_and_fwd_flag', types.StringType(), True),
+            types.StructField('RatecodeID', types.IntegerType(), True), 
+            types.StructField('PULocationID', types.IntegerType(), True), 
+            types.StructField('DOLocationID', types.IntegerType(), True), 
+            types.StructField('passenger_count', types.IntegerType(), True), 
+            types.StructField('trip_distance', types.DoubleType(), True),
+            types.StructField('fare_amount', types.DoubleType(), True), 
+            types.StructField('extra', types.DoubleType(), True), 
+            types.StructField('mta_tax', types.DoubleType(), True), 
+            types.StructField('tip_amount', types.DoubleType(), True), 
+            types.StructField('tolls_amount', types.DoubleType(), True), 
+            types.StructField('ehail_fee', types.DoubleType(), True),
+            types.StructField('improvement_surcharge', types.DoubleType(), True), 
+            types.StructField('total_amount', types.DoubleType(), True), 
+            types.StructField('payment_type', types.IntegerType(), True), 
+            types.StructField('trip_type', types.IntegerType(), True), 
+            types.StructField('congestion_surcharge', types.DoubleType(), True)
+        ])                    
+
+    def yellow_schema(self):
+        return types.StructType([
+            types.StructField('VendorID', types.IntegerType(), True), 
+            types.StructField('tpep_pickup_datetime', types.TimestampType(), True),
+            types.StructField('tpep_dropoff_datetime', types.TimestampType(), True),
+            types.StructField('passenger_count', types.IntegerType(), True), 
+            types.StructField('trip_distance', types.DoubleType(), True), 
+            types.StructField('RatecodeID', types.IntegerType(), True), 
+            types.StructField('store_and_fwd_flag', types.StringType(), True), 
+            types.StructField('PULocationID', types.IntegerType(), True), 
+            types.StructField('DOLocationID', types.IntegerType(), True), 
+            types.StructField('payment_type', types.IntegerType(), True), 
+            types.StructField('fare_amount', types.DoubleType(), True), 
+            types.StructField('extra', types.DoubleType(), True), 
+            types.StructField('mta_tax', types.DoubleType(), True), 
+            types.StructField('tip_amount', types.DoubleType(), True), 
+            types.StructField('tolls_amount', types.DoubleType(), True), 
+            types.StructField('improvement_surcharge', types.DoubleType(), True), 
+            types.StructField('total_amount', types.DoubleType(), True), 
+            types.StructField('congestion_surcharge', types.DoubleType(), True)
+        ])
 
 month = range(1, 2)
 year = [2019, 2020]
